@@ -19,7 +19,7 @@ jobs:
         run: ./build/morf_eval --seed 1234 --files 4 | tee scorecard.md >> "$GITHUB_STEP_SUMMARY"
 
   macos-plugin:
-    runs-on: macos-14
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - name: Configure (universal binary)
