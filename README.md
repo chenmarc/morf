@@ -1,6 +1,8 @@
 # morf: guitar to MIDI
 
-Low-latency guitar-to-MIDI engine. Step 1 of the plan includes a test bench and a single-note baseline tracker. The JUCE plugin (standalone, VST3 and AU) comes in step 2 and will link `morf_core` unchanged.
+Low-latency guitar-to-MIDI as a standalone macOS app plus VST3 and AU plugins. It includes a test bench with a synthetic guitar for measuring accuracy and latency.
+
+**Status:** single-note tracking with bends and mutes works (step 1–2). Polyphonic tracking is step 3. See `docs/results.md` and `docs/daw-setup.md`.
 
 ## Build (macOS or Linux)
 
@@ -11,7 +13,9 @@ cmake --build build
 ./build/morf_eval                 # scorecard on the synthetic test set
 ```
 
-You need CMake 3.20+ and a C++17 compiler (Xcode command-line tools are fine). There are no other dependencies.
+You need CMake 3.20+ and a C++17 compiler (Xcode command-line tools are fine). The engine has no other dependencies.
+
+To build the plugin and app too (this downloads JUCE 8), add `-DMORF_BUILD_PLUGIN=ON`. See `docs/daw-setup.md` for installing it and using it in Ableton and Logic.
 
 ## Tools
 
@@ -27,13 +31,14 @@ You need CMake 3.20+ and a C++17 compiler (Xcode command-line tools are fine). T
 ## Layout
 
 ```
+plugin/  JUCE plugin + standalone app (MorfProcessor, editor, monitor synth)
 core/    real-time engine (no deps, no allocation in process()): FFT, YIN, MonoTracker
 synth/   synthetic guitar (Karplus-Strong string model) + test-set generator
 eval/    scoring: note matching, latency, pitch error, octave errors
 io/      WAV and Standard MIDI File I/O
 tools/   morf_eval, morf_track
-tests/   unit tests
-docs/    results.md, dsp-primer.md, polyphonic-research.md
+tests/   unit tests + plugin integration test (runs the processor like a host)
+docs/    results.md, daw-setup.md, dsp-primer.md, polyphonic-research.md
 ```
 
 Start with `docs/results.md` for where things stand, and `docs/dsp-primer.md` for how it works.

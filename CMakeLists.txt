@@ -1,8 +1,11 @@
 cmake_minimum_required(VERSION 3.20)
-project(morf CXX)
+project(morf VERSION 0.2.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)   # morf_core links into plugin bundles
+option(MORF_BUILD_PLUGIN "Build the JUCE plugin and standalone app (downloads JUCE)" OFF)
+set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum macOS version")
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
@@ -38,3 +41,7 @@ enable_testing()
 add_executable(morf_tests tests/test_main.cpp)
 target_link_libraries(morf_tests PRIVATE morf_bench)
 add_test(NAME morf_tests COMMAND morf_tests)
+
+if(MORF_BUILD_PLUGIN)
+  add_subdirectory(plugin)
+endif()

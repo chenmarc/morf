@@ -1,0 +1,51 @@
+name: build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  bench:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build engine and test bench
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build -j
+      - name: Unit tests
+        run: ./build/morf_tests
+      - name: Scorecard (held-out seed)
+        run: ./build/morf_eval --seed 1234 --files 4 | tee scorecard.md >> "$GITHUB_STEP_SUMMARY"
+
+  macos-plugin:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure (universal binary)
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DMORF_BUILD_PLUGIN=ON -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+      - name: Build
+        run: cmake --build build -j 4
+      - name: Tests
+        run: |
+          ./build/morf_tests
+          ./build/plugin/morf_plugin_test_artefacts/Release/morf_plugin_test
+      - name: Validate AU (auval)
+        run: |
+          mkdir -p ~/Library/Audio/Plug-Ins/Components
+          cp -R build/plugin/morf_plugin_artefacts/Release/AU/morf.component ~/Library/Audio/Plug-Ins/Components/
+          killall -9 AudioComponentRegistrar || true
+          auval -v aumu Mrf1 Mrfm
+      - name: Validate VST3 and AU (pluginval)
+        run: |
+          curl -sSL -o pluginval.zip https://github.com/Tracktion/pluginval/releases/download/v1.0.3/pluginval_macOS.zip
+          unzip -q pluginval.zip
+          ./pluginval.app/Contents/MacOS/pluginval --strictness-level 8 --skip-gui-tests --validate build/plugin/morf_plugin_artefacts/Release/VST3/morf.vst3
+      - name: Upload builds (unsigned)
+        uses: actions/upload-artifact@v4
+        with:
+          name: morf-macos-unsigned
+          path: |
+            build/plugin/morf_plugin_artefacts/Release/Standalone/morf.app
+            build/plugin/morf_plugin_artefacts/Release/VST3/morf.vst3
+            build/plugin/morf_plugin_artefacts/Release/AU/morf.component

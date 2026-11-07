@@ -51,6 +51,16 @@ public:
     };
     const Frame& lastFrame() const { return frame_; }
 
+    // Settings a user can change while playing (safe to call between process() calls).
+    void setGate(float onDb) { cfg_.gateOnDb = onDb; cfg_.gateOffDb = onDb - 8.f; }
+    void setBendRange(float semitones) { cfg_.bendRange = semitones; }
+    void setChannel(int ch) { cfg_.channel = ch & 15; }
+    const MonoTrackerConfig& config() const { return cfg_; }
+    bool noteActive() const { return active_; }
+    int currentNote() const { return active_ ? note_ : -1; }
+    float currentBend() const { return bend_; }
+    int64_t samplePosition() const { return samplePos_; }
+
 private:
     void analyseFrame(EventQueue& out);
     void startNote(float midi, EventQueue& out, int velocity = -1);

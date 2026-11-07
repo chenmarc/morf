@@ -24,12 +24,12 @@ public:
     static constexpr int kCapacity = 1024;
     bool push(const MidiEvent& e) {
         if (size_ >= kCapacity) { ++dropped_; return false; }
-        events_[size_++] = e;
+        events_[size_t(size_++)] = e;
         return true;
     }
     void clear() { size_ = 0; }
     int size() const { return size_; }
-    const MidiEvent& operator[](int i) const { return events_[i]; }
+    const MidiEvent& operator[](int i) const { return events_[size_t(i)]; }
     const MidiEvent* begin() const { return events_.data(); }
     const MidiEvent* end() const { return events_.data() + size_; }
     int dropped() const { return dropped_; }
