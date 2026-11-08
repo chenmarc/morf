@@ -42,3 +42,55 @@ docs/    results.md, daw-setup.md, dsp-primer.md, polyphonic-research.md
 ```
 
 Start with `docs/results.md` for where things stand, and `docs/dsp-primer.md` for how it works.
+
+## File tree
+
+```
+morf/
+├── CMakeLists.txt                 Top-level build: engine, test bench, tools; plugin with -DMORF_BUILD_PLUGIN=ON
+├── README.md                      This file: build steps, tools, and the file tree
+├── .gitignore                     Keeps build output and generated audio/MIDI out of git
+├── .github/
+│   └── workflows/
+│       └── build.yml              CI: Linux bench and tests, and macOS plugin build with auval and pluginval
+├── core/                          Real-time engine (no dependencies, no allocation in process())
+│   ├── include/morf/
+│   │   ├── events.h               MIDI event struct and fixed-size event queue for the audio thread
+│   │   ├── fft.h                  Declares the in-place radix-2 FFT
+│   │   ├── mono_tracker.h         Declares the single-note tracker and its settings
+│   │   ├── tracker.h              Common interface every pitch-to-MIDI engine implements
+│   │   └── yin.h                  Declares the YIN pitch detector
+│   └── src/
+│       ├── fft.cpp                FFT implementation
+│       ├── mono_tracker.cpp       Single-note tracker: onsets, pitch, bends, legato, mutes, note-off
+│       └── yin.cpp                YIN pitch detection, FFT-accelerated, with octave checks
+├── eval/
+│   ├── evaluate.h                 Declares the scoring functions and result types
+│   └── evaluate.cpp               Matches notes to ground truth; computes latency, pitch error and octave errors
+├── io/
+│   ├── audio_io.h                 Declares WAV read/write and MIDI file write
+│   └── audio_io.cpp               WAV (16/24/32-bit PCM and float) and Standard MIDI File I/O
+├── synth/
+│   ├── guitar_synth.h             Declares the synthetic guitar and its note specification
+│   ├── guitar_synth.cpp           Karplus-Strong string model with bends, vibrato, palm mutes and hum
+│   ├── test_set.h                 Declares the labelled synthetic test-set generator
+│   └── test_set.cpp               Generates single, legato, repeat, bend, vibrato, palm and chord test cases
+├── tools/
+│   ├── morf_eval.cpp              Scorecard runner: synthetic set, your own recordings, and frame traces
+│   └── morf_track.cpp             Converts any guitar WAV into a MIDI file
+├── tests/
+│   ├── test_main.cpp              Unit tests for YIN, synth tuning, single notes, block-size invariance, bends, I/O
+│   └── plugin_test.cpp            Runs the real plugin processor with odd block sizes and checks its MIDI output
+├── plugin/                        JUCE plugin and standalone app (built with -DMORF_BUILD_PLUGIN=ON)
+│   ├── CMakeLists.txt             JUCE targets: Standalone, VST3, AU (macOS only), and the plugin test
+│   ├── MonitorSynth.h             Small built-in synth so you can hear the tracking
+│   ├── PluginProcessor.h          Declares the plugin processor, parameters and virtual MIDI port
+│   ├── PluginProcessor.cpp        Mixes input to mono, runs the tracker, places MIDI events and drives the synth
+│   ├── PluginEditor.h             Declares the plugin window
+│   └── PluginEditor.cpp           Window: detected note, bend bar, input meter, knobs and bend-range menu
+└── docs/
+    ├── results.md                 Step 1 accuracy and latency results, with the tuning log
+    ├── dsp-primer.md              Plain-language guide to the DSP behind the tracker
+    ├── daw-setup.md               How to install and wire morf into Ableton, Logic and the standalone app
+    └── polyphonic-research.md     Options for chord (polyphonic) tracking in step 3
+```
