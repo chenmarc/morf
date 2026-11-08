@@ -21,7 +21,9 @@ MorfEditor::MorfEditor(MorfProcessor& p) : AudioProcessorEditor(&p), proc(p) {
     setupKnob(dryLevel, "dryLevel", "Guitar level");
     setupKnob(channel, "midiChannel", "MIDI channel");
 
-    bendRange.addItemList({"±2 semitones", "±12 semitones", "±24 semitones", "±48 semitones"}, 1);
+    // JUCE treats plain char* text as ASCII, so non-ASCII symbols go through fromUTF8 with escaped bytes.
+    const auto pm = juce::String::fromUTF8("\xc2\xb1");  // plus-minus sign
+    bendRange.addItemList({pm + "2 semitones", pm + "12 semitones", pm + "24 semitones", pm + "48 semitones"}, 1);
     addAndMakeVisible(bendRange);
     bendAttach = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(p.params, "bendRange", bendRange);
     bendLabel.setText("Pitch-bend range", juce::dontSendNotification);
@@ -64,7 +66,7 @@ void MorfEditor::paint(juce::Graphics& g) {
     g.setColour(kDim);
     g.setFont(juce::FontOptions(13.f));
     juce::String status = "guitar to MIDI";
-    if (proc.hasVirtualMidiPort()) status += "  ·  sending to virtual MIDI port \"morf\"";
+    if (proc.hasVirtualMidiPort()) status += juce::String::fromUTF8("  \xc2\xb7  ") + "sending to virtual MIDI port \"morf\"";
     g.drawText(status, 90, 14, 500, 28, juce::Justification::centredLeft);
 
     // Detected note and how far it's bent.

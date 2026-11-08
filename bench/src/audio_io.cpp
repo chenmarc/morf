@@ -1,9 +1,11 @@
 #include "morf/bench/audio_io.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <cstring>
 #include <fstream>
+#include <iterator>
 
 namespace morf {
 

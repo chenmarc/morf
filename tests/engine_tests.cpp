@@ -1,6 +1,8 @@
 // Small self-contained test runner (no framework dependency).
 #include <cmath>
 #include <cstdio>
+#include <filesystem>
+#include <string>
 #include <vector>
 
 #include "morf/bench/audio_io.h"
@@ -9,6 +11,8 @@
 #include "morf/yin.h"
 
 using namespace morf;
+
+static constexpr double kPi = 3.14159265358979323846;  // M_PI isn't standard C++ (MSVC lacks it)
 
 static int failures = 0;
 #define CHECK(cond, ...)                                              \
@@ -40,7 +44,7 @@ static void testYinSines() {
     YinDetector yin(fs, 72, 1400);
     std::vector<float> buf(yin.bufferSize());
     for (double f : {73.4, 82.41, 110.0, 196.0, 329.6, 659.3, 1318.5}) {
-        for (size_t i = 0; i < buf.size(); ++i) buf[i] = float(0.5 * std::sin(2 * M_PI * f * i / fs) + 0.2 * std::sin(4 * M_PI * f * i / fs));
+        for (size_t i = 0; i < buf.size(); ++i) buf[i] = float(0.5 * std::sin(2 * kPi * f * i / fs) + 0.2 * std::sin(4 * kPi * f * i / fs));
         const auto pe = yin.analyze(buf.data());
         CHECK(std::abs(cents(pe.f0, f)) < 2.0, "f=%.1f got %.2f (%.2f cents)", f, pe.f0, cents(pe.f0, f));
         CHECK(pe.aperiodicity < 0.05f, "f=%.1f aperiodicity %.3f", f, pe.aperiodicity);
@@ -120,12 +124,14 @@ static void testBendTracking() {
 
 static void testMidiRoundTrip() {
     std::vector<MidiEvent> ev = {makeNoteOn(4800, 0, 60, 100), makePitchBend(9600, 0, 9000), makeNoteOff(48000, 0, 60)};
-    CHECK(writeMidiFile("/tmp/morf_test.mid", ev, 48000, 12), "write midi");
+    const auto dir = std::filesystem::temp_directory_path();
+    const std::string midPath = (dir / "morf_test.mid").string(), wavPath = (dir / "morf_test.wav").string();
+    CHECK(writeMidiFile(midPath, ev, 48000, 12), "write midi");
     Audio a;
     a.samples = {0.f, 0.5f, -0.5f};
-    CHECK(writeWav("/tmp/morf_test.wav", a), "write wav");
+    CHECK(writeWav(wavPath, a), "write wav");
     Audio b;
-    CHECK(readWav("/tmp/morf_test.wav", b) && b.samples.size() == 3 && b.samples[1] == 0.5f, "wav round trip");
+    CHECK(readWav(wavPath, b) && b.samples.size() == 3 && b.samples[1] == 0.5f, "wav round trip");
 }
 
 int main() {

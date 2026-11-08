@@ -6,16 +6,24 @@ Low-latency guitar-to-MIDI as a standalone macOS app plus VST3 and AU plugins. I
 
 ## Build
 
+The same commands work on an Intel Mac, an Apple silicon Mac, Windows (Visual Studio 2022) and Linux:
+
 ```sh
-cmake -S . -B build
-cmake --build build --config Release
-ctest --test-dir build -C Release --output-on-failure   # run the tests
-./build/bin/morf_eval                                   # scorecard on the synthetic test set
+cmake --preset default          # configure: plugin, app, tools and tests for this computer (downloads JUCE 8)
+cmake --build --preset default  # build
+ctest --preset default          # run the tests
+./build/bin/morf_eval           # scorecard on the synthetic test set (Windows: build\bin\Release\morf_eval.exe)
 ```
 
-You need CMake 3.22+ and a C++17 compiler (Xcode command-line tools on macOS). The engine has no other dependencies. Command-line tools and test programs end up in `build/bin/`.
+| Preset | What it builds |
+|---|---|
+| `default` | Plugin, standalone app, tools and tests for the computer you're on. An Intel Mac gets an Intel build and an Apple silicon Mac gets an Apple silicon build |
+| `mac-universal` | One macOS binary that runs natively on both Intel and Apple silicon (what CI ships). Builds into `build-universal/` |
+| `bench` | Only the engine, tools and tests: no JUCE download, builds in seconds. Builds into `build-bench/` |
 
-To build the plugin and app too (this downloads JUCE 8), add `-DMORF_BUILD_PLUGIN=ON` to the first command. See `docs/daw-setup.md` for installing it and using it in Ableton and Logic.
+You need CMake 3.22+ and a C++17 compiler: Xcode command-line tools on macOS, Visual Studio 2022 on Windows. macOS builds run on macOS 10.15 or later. Windows builds are 64-bit and need no Visual C++ redistributable.
+
+The plugin and app end up in `build/plugin/morf_plugin_artefacts/Release/`. See `docs/daw-setup.md` for installing them and using them in Ableton and Logic.
 
 ## Tools
 
@@ -46,10 +54,12 @@ Start with `docs/results.md` for where things stand, and `docs/dsp-primer.md` fo
 ```
 morf/
 ├── CMakeLists.txt                       Top-level build: options and the list of subfolders
+├── CMakePresets.json                    One-command builds: default, mac-universal, bench
 ├── README.md                            This file: build steps, tools, and the file tree
 ├── .gitignore                           Keeps build output and generated audio/MIDI out of git
 ├── .github/workflows/build.yml          CI: builds and tests on Linux and macOS, validates the plugins
 ├── cmake/
+│   ├── MorfTargets.cmake                Target machines: native or universal Mac, minimum macOS, Windows runtime
 │   ├── MorfPlatform.cmake               C++ standard, build type, output folders, compiler warnings
 │   └── FetchJUCE.cmake                  Downloads the pinned JUCE release, or uses a local checkout
 ├── core/                                Real-time engine (no dependencies, no allocation in process())

@@ -33,6 +33,10 @@ target_compile_definitions(morf_plugin PUBLIC
   JUCE_VST3_CAN_REPLACE_VST2=0
   JUCE_DISPLAY_SPLASH_SCREEN=0)
 
+if(MSVC)
+  target_compile_options(morf_plugin PRIVATE /utf-8)
+endif()
+
 target_link_libraries(morf_plugin
   PRIVATE
     morf_core
