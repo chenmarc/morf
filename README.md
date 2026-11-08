@@ -23,7 +23,7 @@ ctest --preset default          # run the tests
 
 You need CMake 3.22+ and a C++17 compiler: Xcode command-line tools on macOS, Visual Studio 2022 on Windows. macOS builds run on macOS 10.15 or later. Windows builds are 64-bit and need no Visual C++ redistributable.
 
-The plugin and app end up in `build/plugin/morf_plugin_artefacts/Release/`. See `docs/daw-setup.md` for installing them and using them in Ableton and Logic.
+The plugin and app end up in `build/plugin/morf_plugin_artefacts/Release/`. To install them, run `scripts/install-mac.sh` on a Mac, or `scripts\install-windows.ps1` from an administrator PowerShell on Windows. See `docs/daw-setup.md` for the details and for using morf in Ableton, Logic and the standalone app.
 
 ## Tools
 
@@ -109,7 +109,7 @@ morf/
 │   ├── install-mac.sh                   Installs the built VST3, AU and app on a Mac (re-signs, clears quarantine)
 │   └── install-windows.ps1              Installs the built VST3 and app on a Windows PC
 └── docs/
-    ├── daw-setup.md                     How to install and wire morf into Ableton, Logic and the standalone app
+    ├── daw-setup.md                     Building, installing and using morf in Ableton, Logic and the standalone app, on Mac and Windows
     ├── dsp-primer.md                    Plain-language guide to the DSP behind the tracker
     ├── polyphonic-research.md           Options for chord (polyphonic) tracking in step 3
     └── results.md                       Step 1 accuracy and latency results, with the tuning log
