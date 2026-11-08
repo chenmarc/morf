@@ -2,7 +2,7 @@
 #include <string>
 #include <vector>
 
-#include "guitar_synth.h"
+#include "morf/bench/guitar_synth.h"
 
 namespace morf {
 

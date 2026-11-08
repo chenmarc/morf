@@ -1,15 +1,4 @@
-# morf plugin: Standalone app, VST3 and AU (AU on macOS only).
-include(FetchContent)
-
-if(MORF_JUCE_DIR)
-  add_subdirectory(${MORF_JUCE_DIR} ${CMAKE_BINARY_DIR}/juce EXCLUDE_FROM_ALL)
-else()
-  FetchContent_Declare(juce
-    GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
-    GIT_TAG 8.0.4
-    GIT_SHALLOW TRUE)
-  FetchContent_MakeAvailable(juce)
-endif()
+# morf plugin: Standalone app, VST3, and AU (AU on macOS only).
 
 set(MORF_FORMATS Standalone VST3)
 if(APPLE)
@@ -18,7 +7,7 @@ endif()
 
 juce_add_plugin(morf_plugin
   PRODUCT_NAME "morf"
-  ICON_BIG "${CMAKE_CURRENT_SOURCE_DIR}/assets/icon.png"
+  ICON_BIG "${CMAKE_CURRENT_SOURCE_DIR}/resources/icon.png"
   COMPANY_NAME "morf"
   BUNDLE_ID "com.morf.morf"
   PLUGIN_MANUFACTURER_CODE Mrfm
@@ -36,7 +25,7 @@ juce_add_plugin(morf_plugin
   MICROPHONE_PERMISSION_TEXT "morf listens to your guitar input to convert it to MIDI."
   COPY_PLUGIN_AFTER_BUILD FALSE)
 
-target_sources(morf_plugin PRIVATE PluginProcessor.cpp PluginEditor.cpp)
+target_sources(morf_plugin PRIVATE source/PluginProcessor.cpp source/PluginEditor.cpp)
 
 target_compile_definitions(morf_plugin PUBLIC
   JUCE_WEB_BROWSER=0
@@ -53,12 +42,3 @@ target_link_libraries(morf_plugin
     juce::juce_recommended_config_flags
     juce::juce_recommended_lto_flags
     juce::juce_recommended_warning_flags)
-
-# Host-style integration test: the real processor, odd block sizes, stereo input.
-juce_add_console_app(morf_plugin_test PRODUCT_NAME "morf_plugin_test")
-# Compiles the processor sources directly (a plugin target's code can't be linked into an app).
-target_sources(morf_plugin_test PRIVATE ../tests/plugin_test.cpp PluginProcessor.cpp PluginEditor.cpp)
-target_compile_definitions(morf_plugin_test PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JucePlugin_Name="morf")
-target_link_libraries(morf_plugin_test PRIVATE morf_bench juce::juce_audio_utils juce::juce_audio_devices
-  juce::juce_recommended_config_flags)
-add_test(NAME morf_plugin_test COMMAND morf_plugin_test)

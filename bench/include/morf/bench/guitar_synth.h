@@ -12,7 +12,7 @@
 #include <utility>
 #include <vector>
 
-#include "../io/audio_io.h"
+#include "morf/bench/audio_io.h"
 
 namespace morf {
 

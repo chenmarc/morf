@@ -4,7 +4,7 @@
 #include <cstring>
 #include <iostream>
 
-#include "../io/audio_io.h"
+#include "morf/bench/audio_io.h"
 #include "morf/mono_tracker.h"
 
 using namespace morf;

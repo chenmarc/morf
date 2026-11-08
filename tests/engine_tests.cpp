@@ -3,8 +3,8 @@
 #include <cstdio>
 #include <vector>
 
-#include "../io/audio_io.h"
-#include "../synth/guitar_synth.h"
+#include "morf/bench/audio_io.h"
+#include "morf/bench/guitar_synth.h"
 #include "morf/mono_tracker.h"
 #include "morf/yin.h"
 

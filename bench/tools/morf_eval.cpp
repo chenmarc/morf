@@ -16,9 +16,9 @@
 #include <sstream>
 #include <string>
 
-#include "../eval/evaluate.h"
-#include "../io/audio_io.h"
-#include "../synth/test_set.h"
+#include "morf/bench/evaluate.h"
+#include "morf/bench/audio_io.h"
+#include "morf/bench/test_set.h"
 #include "morf/mono_tracker.h"
 
 using namespace morf;

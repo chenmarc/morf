@@ -1,4 +1,9 @@
 build/
 build-*/
+out/
+CMakeUserPresets.json
+.DS_Store
+.vscode/
+.idea/
 *.wav
 *.mid

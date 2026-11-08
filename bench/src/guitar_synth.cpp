@@ -1,4 +1,4 @@
-#include "guitar_synth.h"
+#include "morf/bench/guitar_synth.h"
 
 #include <algorithm>
 #include <cmath>

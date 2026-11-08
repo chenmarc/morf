@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "morf/events.h"
-#include "../synth/guitar_synth.h"
+#include "morf/bench/guitar_synth.h"
 
 namespace morf {
 

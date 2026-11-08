@@ -3,8 +3,8 @@
 #include <cstdio>
 #include <vector>
 
-#include "../plugin/PluginProcessor.h"
-#include "../synth/guitar_synth.h"
+#include "PluginProcessor.h"
+#include "morf/bench/guitar_synth.h"
 
 int main() {
     juce::ScopedJuceInitialiser_GUI init;
