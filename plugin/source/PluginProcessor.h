@@ -8,7 +8,7 @@
 #include "MonitorSynth.h"
 #include "morf/mono_tracker.h"
 
-class MorfProcessor : public juce::AudioProcessor {
+class MorfProcessor : public juce::AudioProcessor, private juce::VST3ClientExtensions {
 public:
     MorfProcessor();
     ~MorfProcessor() override;
@@ -37,6 +37,12 @@ public:
     void getStateInformation(juce::MemoryBlock& destData) override;
     void setStateInformation(const void* data, int sizeInBytes) override;
 
+    // VST3 only: present the guitar input as a side-chain (auxiliary) bus instead of a main
+    // input. Instrument hosts such as Ableton Live only route another track's audio into an
+    // instrument through its side-chain. AU and the standalone app are unaffected.
+    juce::VST3ClientExtensions* getVST3ClientExtensions() override { return this; }
+    bool getPluginHasMainInput() const override { return false; }
+
     juce::AudioProcessorValueTreeState params;
 
     // Read by the editor (GUI thread); written by the audio thread.
@@ -55,6 +61,8 @@ private:
     morf::EventQueue events;
     morf::MonitorSynth synth;
     juce::AudioBuffer<float> mono;
+    juce::AudioBuffer<float> lastOut;  // previous block's output, to spot hosts echoing it back as input
+    int lastOutSamples = -1;
     std::unique_ptr<juce::MidiOutput> virtualOut;  // standalone app only
     double currentRate = 48000.0;
     int lastSentBendRange = -1;

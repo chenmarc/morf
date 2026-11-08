@@ -42,6 +42,7 @@ The plugin and app end up in `build/plugin/morf_plugin_artefacts/Release/`. See 
 core/     real-time engine (no dependencies, no allocation in process()): FFT, YIN, MonoTracker
 bench/    offline test bench: synthetic guitar, WAV/MIDI file I/O, scoring, morf_eval and morf_track
 plugin/   JUCE plugin (VST3, AU) and standalone app: processor, editor, monitor synth, icon
+scripts/  one-command install of the built plugins on macOS and Windows
 tests/    engine unit tests and the plugin integration test (run with ctest)
 cmake/    shared build settings and the JUCE download
 docs/     results, DAW setup, DSP primer, polyphonic research
@@ -90,19 +91,22 @@ morf/
 │       ├── morf_eval.cpp                Scorecard runner: synthetic set, your own recordings, and frame traces
 │       └── morf_track.cpp               Converts any guitar WAV into a MIDI file
 ├── plugin/                              JUCE plugin and standalone app (built with -DMORF_BUILD_PLUGIN=ON)
-│   ├── CMakeLists.txt                   JUCE targets: Standalone, VST3, AU (macOS only)
+│   ├── CMakeLists.txt                   JUCE targets: Standalone, VST3, AU (macOS only); re-signs macOS bundles
 │   ├── resources/
 │   │   └── icon.png                     App icon: 1024 px macOS squircle
 │   └── source/
 │       ├── MonitorSynth.h               Small built-in synth so you can hear the tracking
 │       ├── PluginEditor.h               Declares the plugin window
 │       ├── PluginEditor.cpp             Window: detected note, bend bar, input meter, knobs and bend-range menu
-│       ├── PluginProcessor.h            Declares the plugin processor, parameters and virtual MIDI port
+│       ├── PluginProcessor.h            Declares the plugin processor, parameters, virtual MIDI port and VST3 side-chain
 │       └── PluginProcessor.cpp          Mixes input to mono, runs the tracker, places MIDI events and drives the synth
 ├── tests/
 │   ├── CMakeLists.txt                   Registers the tests with ctest
 │   ├── engine_tests.cpp                 Unit tests: YIN, synth tuning, single notes, block-size invariance, bends, I/O
-│   └── plugin_tests.cpp                 Runs the real plugin processor with odd block sizes and checks its MIDI output
+│   └── plugin_tests.cpp                 Runs the real plugin processor like a host; also simulates Live's side-chain echo
+├── scripts/
+│   ├── install-mac.sh                   Installs the built VST3, AU and app on a Mac (re-signs, clears quarantine)
+│   └── install-windows.ps1              Installs the built VST3 and app on a Windows PC
 └── docs/
     ├── daw-setup.md                     How to install and wire morf into Ableton, Logic and the standalone app
     ├── dsp-primer.md                    Plain-language guide to the DSP behind the tracker

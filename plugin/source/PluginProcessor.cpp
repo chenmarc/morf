@@ -1,5 +1,7 @@
 #include "PluginProcessor.h"
 
+#include <cstring>
+
 #include "PluginEditor.h"
 
 namespace {
@@ -62,6 +64,8 @@ void MorfProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
     tracker = std::make_unique<morf::MonoTracker>(cfg);
     synth.prepare(sampleRate);
     mono.setSize(1, juce::jmax(1, samplesPerBlock));
+    lastOut.setSize(1, juce::jmax(1, samplesPerBlock));
+    lastOutSamples = -1;
     lastSentBendRange = -1;
     setLatencySamples(0);  // events are placed where they were detected; no extra delay
 }
@@ -76,11 +80,18 @@ void MorfProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuf
     const int outCh = getTotalNumOutputChannels();
     if (mono.getNumSamples() < n) mono.setSize(1, n, false, false, true);  // only if the host lied about block size
 
+    // Ableton Live hands an unrouted VST3 side-chain our own previous output as "input".
+    // Tracking that would make morf follow its own synth, so treat an exact echo as silence.
+    // Real audio never matches the previous output sample for sample.
+    const bool inputIsEcho = inCh > 0 && lastOutSamples == n &&
+                             std::memcmp(buffer.getReadPointer(0), lastOut.getReadPointer(0), sizeof(float) * size_t(n)) == 0;
+
     // Mix the guitar input down to mono with the input gain.
     float* m = mono.getWritePointer(0);
     const float gain = juce::Decibels::decibelsToGain(inputGainDb->load()) / float(juce::jmax(1, inCh));
     juce::FloatVectorOperations::clear(m, n);
-    for (int c = 0; c < inCh; ++c) juce::FloatVectorOperations::addWithMultiply(m, buffer.getReadPointer(c), gain, n);
+    if (!inputIsEcho)
+        for (int c = 0; c < inCh; ++c) juce::FloatVectorOperations::addWithMultiply(m, buffer.getReadPointer(c), gain, n);
 
     // Apply user settings, then track.
     const int bendRange = kBendRanges[juce::jlimit(0, 3, int(bendRangeIndex->load()))];
@@ -126,6 +137,13 @@ void MorfProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuf
         else buffer.clear(c, 0, n);
     }
     for (int c = outCh; c < buffer.getNumChannels(); ++c) buffer.clear(c, 0, n);
+
+    if (out0 && n <= lastOut.getNumSamples()) {
+        lastOut.copyFrom(0, 0, out0, n);
+        lastOutSamples = n;
+    } else {
+        lastOutSamples = -1;
+    }
 
     if (virtualOut && !midi.isEmpty()) virtualOut->sendBlockOfMessagesNow(midi);
 

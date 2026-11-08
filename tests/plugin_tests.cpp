@@ -1,5 +1,7 @@
 // Drives the real plugin processor the way a host would: odd block sizes,
 // stereo input, and checks the MIDI it outputs matches the engine on its own.
+// Also simulates Ableton Live's unrouted VST3 side-chain, which feeds the
+// plugin's previous output back in as input.
 #include <cstdio>
 #include <vector>
 
@@ -71,7 +73,41 @@ int main() {
     if (ons != 3) { std::printf("FAIL: %d note-ons, expected 3\n", ons); ++failures; }
     if (rpn != 4) { std::printf("FAIL: expected one bend-range RPN (4 CCs), got %d\n", rpn); ++failures; }
     if (outPeak < 0.01f) { std::printf("FAIL: monitor synth is silent\n"); ++failures; }
+
+    // Echo test: one guitar note, then the host keeps handing back our own output as input.
+    // morf must not track its own synth: the note has to end and no new notes may start.
+    {
+        std::unique_ptr<juce::AudioProcessor> p2(createPluginFilter());
+        p2->setBusesLayout(layout);
+        p2->setRateAndBufferSizeDetails(fs, maxBlock);
+        p2->prepareToPlay(fs, maxBlock);
+        const Audio one = renderGuitar({{0.1, 0.6, 57, 0.9f}}, {}, nullptr);
+        const int bs = 256;
+        juce::AudioBuffer<float> b(2, bs);
+        int onsBefore = 0, onsDuringEcho = 0, offs = 0;
+        float echoPeak = 0.f;
+        const size_t guitarEnd = size_t(0.6 * fs), total = size_t(2.5 * fs);
+        for (size_t at = 0; at + bs <= total; at += bs) {
+            const bool echo = at >= guitarEnd;
+            if (!echo)
+                for (int c = 0; c < 2; ++c) b.copyFrom(c, 0, one.samples.data() + at, bs);
+            // In the echo phase b still holds the previous block's output, exactly like Live's buffer.
+            if (echo) echoPeak = std::max(echoPeak, b.getMagnitude(0, 0, bs));
+            juce::MidiBuffer mb;
+            p2->processBlock(b, mb);
+            for (const auto m : mb) {
+                const auto msg = m.getMessage();
+                if (msg.isNoteOn()) (echo ? onsDuringEcho : onsBefore)++;
+                if (msg.isNoteOff()) ++offs;
+            }
+        }
+        if (onsBefore != 1) { std::printf("FAIL: echo test expected 1 note before the echo, got %d\n", onsBefore); ++failures; }
+        if (echoPeak < 0.01f) { std::printf("FAIL: echo test never fed audio back (peak %.3f)\n", echoPeak); ++failures; }
+        if (onsDuringEcho != 0) { std::printf("FAIL: morf tracked its own echoed output (%d notes)\n", onsDuringEcho); ++failures; }
+        if (offs != onsBefore + onsDuringEcho) { std::printf("FAIL: a note was left hanging during the echo\n"); ++failures; }
+    }
+
     if (failures) return 1;
-    std::printf("plugin test passed: %d notes, %zu events, synth peak %.2f\n", ons, got.size(), outPeak);
+    std::printf("plugin test passed: %d notes, %zu events, synth peak %.2f; echo test passed\n", ons, got.size(), outPeak);
     return 0;
 }
