@@ -4,46 +4,140 @@ on:
   push:
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PLUGINVAL_VERSION: v1.0.3
+
 jobs:
-  bench:
+  # Engine, test bench and a Linux build of the plugin, so the VST3 host test runs here too.
+  linux:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build engine and test bench
+      - name: Install JUCE's Linux dependencies
         run: |
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-          cmake --build build -j
-      - name: Unit tests
-        run: ctest --test-dir build --output-on-failure
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libasound2-dev libfreetype-dev libfontconfig1-dev libx11-dev \
+            libxrandr-dev libxinerama-dev libxcursor-dev libxext-dev libgl1-mesa-dev
+      - name: Configure
+        run: cmake --preset default
+      - name: Build
+        run: cmake --build --preset default -j 4
+      - name: Tests
+        run: ctest --preset default
       - name: Scorecard (held-out seed)
         run: ./build/bin/morf_eval --seed 1234 --files 4 | tee scorecard.md >> "$GITHUB_STEP_SUMMARY"
 
-  macos-plugin:
+  # Apple silicon runner building the universal binary we ship (runs on Intel and Apple silicon).
+  macos-universal:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Configure (universal binary)
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DMORF_BUILD_PLUGIN=ON -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+      - name: Configure (universal)
+        run: cmake --preset mac-universal
       - name: Build
-        run: cmake --build build -j 4
-      - name: Tests
-        run: ctest --test-dir build --output-on-failure
+        run: cmake --build --preset mac-universal -j 4
+      - name: Tests (Apple silicon)
+        run: ctest --preset mac-universal
+      - name: Tests (Intel half of the universal binary, under Rosetta)
+        run: |
+          if arch -x86_64 /usr/bin/true 2>/dev/null; then
+            arch -x86_64 ./build-universal/bin/morf_engine_tests
+            arch -x86_64 ./build-universal/bin/morf_vst3_host_tests build-universal/plugin/morf_plugin_artefacts/Release/VST3/morf.vst3
+          else
+            echo "Rosetta isn't installed on this runner; the Intel job covers Intel."
+          fi
+      - name: Check architectures and signatures
+        run: |
+          art=build-universal/plugin/morf_plugin_artefacts/Release
+          for b in VST3/morf.vst3 AU/morf.component Standalone/morf.app; do
+            lipo -archs "$art/$b/Contents/MacOS/morf"
+            lipo -archs "$art/$b/Contents/MacOS/morf" | grep -q x86_64
+            lipo -archs "$art/$b/Contents/MacOS/morf" | grep -q arm64
+            codesign --verify --deep --strict --verbose=2 "$art/$b"
+          done
       - name: Validate AU (auval)
         run: |
           mkdir -p ~/Library/Audio/Plug-Ins/Components
-          cp -R build/plugin/morf_plugin_artefacts/Release/AU/morf.component ~/Library/Audio/Plug-Ins/Components/
+          cp -R build-universal/plugin/morf_plugin_artefacts/Release/AU/morf.component ~/Library/Audio/Plug-Ins/Components/
           killall -9 AudioComponentRegistrar || true
           auval -v aumu Mrf1 Mrfm
-      - name: Validate VST3 and AU (pluginval)
+      - name: Validate VST3 (pluginval)
         run: |
-          curl -sSL -o pluginval.zip https://github.com/Tracktion/pluginval/releases/download/v1.0.3/pluginval_macOS.zip
+          curl -sSL -o pluginval.zip "https://github.com/Tracktion/pluginval/releases/download/$PLUGINVAL_VERSION/pluginval_macOS.zip"
           unzip -q pluginval.zip
-          ./pluginval.app/Contents/MacOS/pluginval --strictness-level 8 --skip-gui-tests --validate build/plugin/morf_plugin_artefacts/Release/VST3/morf.vst3
-      - name: Upload builds (unsigned)
+          ./pluginval.app/Contents/MacOS/pluginval --strictness-level 8 --skip-gui-tests --validate build-universal/plugin/morf_plugin_artefacts/Release/VST3/morf.vst3
+      - name: Package (unsigned)
+        run: |
+          art=build-universal/plugin/morf_plugin_artefacts/Release
+          mkdir -p dist/morf
+          cp -R "$art/VST3/morf.vst3" "$art/AU/morf.component" "$art/Standalone/morf.app" scripts/install-mac.sh dist/morf/
+          # ditto keeps the executable bits and signatures that a plain artifact upload would drop.
+          ditto -c -k --keepParent dist/morf morf-macos-universal.zip
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: morf-macos-unsigned
-          path: |
-            build/plugin/morf_plugin_artefacts/Release/Standalone/morf.app
-            build/plugin/morf_plugin_artefacts/Release/VST3/morf.vst3
-            build/plugin/morf_plugin_artefacts/Release/AU/morf.component
+          name: morf-macos-universal
+          path: morf-macos-universal.zip
+
+  # Intel Mac running the default preset: the same build Marc makes on his Intel Mac.
+  macos-intel:
+    runs-on: macos-15-intel
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure (this machine, Intel)
+        run: cmake --preset default
+      - name: Build
+        run: cmake --build --preset default -j 4
+      - name: Tests
+        run: ctest --preset default
+      - name: Check architecture and signatures
+        run: |
+          art=build/plugin/morf_plugin_artefacts/Release
+          for b in VST3/morf.vst3 AU/morf.component Standalone/morf.app; do
+            test "$(lipo -archs "$art/$b/Contents/MacOS/morf")" = "x86_64"
+            codesign --verify --deep --strict --verbose=2 "$art/$b"
+          done
+      - name: Validate VST3 (pluginval)
+        run: |
+          curl -sSL -o pluginval.zip "https://github.com/Tracktion/pluginval/releases/download/$PLUGINVAL_VERSION/pluginval_macOS.zip"
+          unzip -q pluginval.zip
+          ./pluginval.app/Contents/MacOS/pluginval --strictness-level 8 --skip-gui-tests --validate build/plugin/morf_plugin_artefacts/Release/VST3/morf.vst3
+      - name: Install script, then load the installed VST3
+        run: |
+          scripts/install-mac.sh build
+          ./build/bin/morf_vst3_host_tests /Library/Audio/Plug-Ins/VST3/morf.vst3
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake --preset default
+      - name: Build
+        run: cmake --build --preset default --parallel 4
+      - name: Tests
+        run: ctest --preset default
+      - name: Validate VST3 (pluginval)
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://github.com/Tracktion/pluginval/releases/download/$env:PLUGINVAL_VERSION/pluginval_Windows.zip" -OutFile pluginval.zip
+          Expand-Archive pluginval.zip -DestinationPath pluginval
+          $exe = Get-ChildItem -Recurse pluginval -Filter pluginval.exe | Select-Object -First 1
+          & $exe.FullName --strictness-level 8 --skip-gui-tests --validate "build\plugin\morf_plugin_artefacts\Release\VST3\morf.vst3"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist\morf | Out-Null
+          Copy-Item -Recurse build\plugin\morf_plugin_artefacts\Release\VST3\morf.vst3 dist\morf\
+          Copy-Item build\plugin\morf_plugin_artefacts\Release\Standalone\morf.exe dist\morf\
+          Copy-Item scripts\install-windows.ps1 dist\morf\
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: morf-windows-x64
+          path: dist/morf

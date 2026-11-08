@@ -58,7 +58,7 @@ morf/
 ├── CMakePresets.json                    One-command builds: default, mac-universal, bench
 ├── README.md                            This file: build steps, tools, and the file tree
 ├── .gitignore                           Keeps build output and generated audio/MIDI out of git
-├── .github/workflows/build.yml          CI: builds and tests on Linux and macOS, validates the plugins
+├── .github/workflows/build.yml          CI: builds and tests on Linux, Intel Mac, Apple silicon Mac and Windows; validates and packages the plugins
 ├── cmake/
 │   ├── MorfTargets.cmake                Target machines: native or universal Mac, minimum macOS, Windows runtime
 │   ├── MorfPlatform.cmake               C++ standard, build type, output folders, compiler warnings

@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Installs the morf plugins and app you just built on this Mac.
 #
-#   scripts/install-mac.sh                # from the default build folder (build/)
-#   scripts/install-mac.sh build-universal
+#   scripts/install-mac.sh                    # from the default build folder (build/)
+#   scripts/install-mac.sh build-universal    # from another build folder
+#   ./install-mac.sh .                        # from an unzipped CI download (bundles next to the script)
 #
 # It copies the VST3 and AU into the system plug-in folders (the ones Ableton and Logic scan by
 # default) and the app into /Applications. It also removes the macOS download-quarantine flag,
@@ -10,11 +11,14 @@
 # folders belong to the administrator.
 set -euo pipefail
 
-build_dir="${1:-build}"
-artefacts="$build_dir/plugin/morf_plugin_artefacts/Release"
-
-if [[ ! -d "$artefacts" ]]; then
-  echo "No build found in $artefacts."
+from="${1:-build}"
+if [[ -d "$from/plugin/morf_plugin_artefacts/Release" ]]; then
+  artefacts="$from/plugin/morf_plugin_artefacts/Release"
+  vst3="$artefacts/VST3/morf.vst3"; au="$artefacts/AU/morf.component"; app="$artefacts/Standalone/morf.app"
+elif [[ -d "$from/morf.vst3" || -d "$from/morf.component" || -d "$from/morf.app" ]]; then
+  vst3="$from/morf.vst3"; au="$from/morf.component"; app="$from/morf.app"
+else
+  echo "No morf build found in $from."
   echo "Build first:  cmake --preset default && cmake --build --preset default"
   exit 1
 fi
@@ -44,9 +48,9 @@ for stale in "$HOME/Library/Audio/Plug-Ins/VST3/morf.vst3" "$HOME/Library/Audio/
   fi
 done
 
-install_bundle "$artefacts/VST3/morf.vst3" /Library/Audio/Plug-Ins/VST3
-install_bundle "$artefacts/AU/morf.component" /Library/Audio/Plug-Ins/Components
-install_bundle "$artefacts/Standalone/morf.app" /Applications
+install_bundle "$vst3" /Library/Audio/Plug-Ins/VST3
+install_bundle "$au" /Library/Audio/Plug-Ins/Components
+install_bundle "$app" /Applications
 
 # Make macOS notice the new Audio Unit straight away.
 killall -9 AudioComponentRegistrar 2>/dev/null || true
