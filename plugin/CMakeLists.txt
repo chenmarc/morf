@@ -18,6 +18,7 @@ endif()
 
 juce_add_plugin(morf_plugin
   PRODUCT_NAME "morf"
+  ICON_BIG "${CMAKE_CURRENT_SOURCE_DIR}/assets/icon.png"
   COMPANY_NAME "morf"
   BUNDLE_ID "com.morf.morf"
   PLUGIN_MANUFACTURER_CODE Mrfm
