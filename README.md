@@ -43,7 +43,7 @@ core/     real-time engine (no dependencies, no allocation in process()): FFT, Y
 bench/    offline test bench: synthetic guitar, WAV/MIDI file I/O, scoring, morf_eval and morf_track
 plugin/   JUCE plugin (VST3, AU) and standalone app: processor, editor, monitor synth, icon
 scripts/  one-command install of the built plugins on macOS and Windows
-tests/    engine unit tests and the plugin integration test (run with ctest)
+tests/    engine unit tests, plugin integration test and VST3 host test (run with ctest)
 cmake/    shared build settings and the JUCE download
 docs/     results, DAW setup, DSP primer, polyphonic research
 ```
@@ -103,7 +103,8 @@ morf/
 ├── tests/
 │   ├── CMakeLists.txt                   Registers the tests with ctest
 │   ├── engine_tests.cpp                 Unit tests: YIN, synth tuning, single notes, block-size invariance, bends, I/O
-│   └── plugin_tests.cpp                 Runs the real plugin processor like a host; also simulates Live's side-chain echo
+│   ├── plugin_tests.cpp                 Runs the real plugin processor like a host; also simulates Live's side-chain echo
+│   └── vst3_host_tests.cpp              Loads the built morf.vst3 through the VST3 API like a DAW and plays guitar into it
 ├── scripts/
 │   ├── install-mac.sh                   Installs the built VST3, AU and app on a Mac (re-signs, clears quarantine)
 │   └── install-windows.ps1              Installs the built VST3 and app on a Windows PC
